@@ -8,6 +8,7 @@ from shared.config import INTRO, ROOM_TITLE, WIZARD_NAME, WIZARD_PERSONA
 from shared.llm import generate, api_key
 from shared.appearance import library_background, library_scene, wallpaper_credit
 from shared.scenery import stage_for_state
+from shared.dialogue import read_aloud_control, reset_dialogue, wizard_message
 from version2.engine import new_game, process_action
 
 st.set_page_config(page_title='Morvan’s Library — Version 2', page_icon='🧙', layout='wide')
@@ -25,6 +26,7 @@ if st.button('↻ Wake again', help='Restart the game and replay the awakening.'
     st.session_state.v2_state = new_game()
     st.session_state.v2_chat = [{'role': 'assistant', 'content': INTRO}]
     st.session_state.pop('v2_scenery', None)
+    reset_dialogue('v2')
     st.rerun()
 
 with st.sidebar:
@@ -39,10 +41,16 @@ with scenery:
 with conversation:
     st.markdown(f'<div class="wizard-presence">🧙 {WIZARD_NAME}<span>Keeper of your captivity</span></div>',
                 unsafe_allow_html=True)
+    voice_enabled = read_aloud_control('v2')
     with st.container(height=445, border=False):
-        for item in st.session_state.v2_chat:
+        for index, item in enumerate(st.session_state.v2_chat):
             with st.chat_message(item['role'], avatar='🧙' if item['role'] == 'assistant' else '🧭'):
-                st.write(item['content'])
+                if item['role'] == 'assistant':
+                    wizard_message(item['content'], prefix='v2', index=index,
+                                   latest=index == len(st.session_state.v2_chat) - 1,
+                                   voice_enabled=voice_enabled)
+                else:
+                    st.write(item['content'])
     player_input = st.chat_input('Try “examine the bookshelf”…', disabled=st.session_state.v2_state.door_open)
     if player_input:
         state = st.session_state.v2_state

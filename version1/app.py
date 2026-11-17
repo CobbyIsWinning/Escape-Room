@@ -11,6 +11,7 @@ from shared.config import (
 from shared.llm import generate, api_key
 from shared.appearance import library_background, library_scene, wallpaper_credit
 from shared.scenery import stage_for_reply
+from shared.dialogue import read_aloud_control, reset_dialogue, wizard_message
 
 SYSTEM = f'''{WIZARD_PERSONA}
 Your enchanted prison is {ROOM_TITLE}, a text escape room.
@@ -42,6 +43,7 @@ if st.button('↻ Wake again', help='Restart the game and replay the awakening.'
     st.session_state.v1_messages = [{'role': 'assistant', 'content': INTRO}]
     st.session_state.v1_scene_stage = 0
     st.session_state.pop('v1_scenery', None)
+    reset_dialogue('v1')
     st.rerun()
 
 scenery, conversation = st.columns([.95, 1.05], gap='large')
@@ -51,12 +53,18 @@ with scenery:
 with conversation:
     st.markdown(f'<div class="wizard-presence">🧙 {WIZARD_NAME}<span>Keeper of your captivity</span></div>',
                 unsafe_allow_html=True)
+    voice_enabled = read_aloud_control('v1')
     if not api_key():
         st.warning('Set GEMINI_API_KEY to speak with the wizard in Version 1.')
     with st.container(height=445, border=False):
-        for message in st.session_state.v1_messages:
+        for index, message in enumerate(st.session_state.v1_messages):
             with st.chat_message(message['role'], avatar='🧙' if message['role'] == 'assistant' else '🧭'):
-                st.write(message['content'])
+                if message['role'] == 'assistant':
+                    wizard_message(message['content'], prefix='v1', index=index,
+                                   latest=index == len(st.session_state.v1_messages) - 1,
+                                   voice_enabled=voice_enabled)
+                else:
+                    st.write(message['content'])
     prompt = st.chat_input('Speak to Morvan, or try “examine the bookshelf”…')
     if prompt:
         st.session_state.v1_messages.append({'role': 'user', 'content': prompt})

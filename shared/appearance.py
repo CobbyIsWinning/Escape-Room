@@ -1,34 +1,40 @@
 """Wizard-library scenery, a browser-driven idle slideshow, and waking mist."""
 from base64 import b64encode
 from html import escape
+from mimetypes import guess_type
 from pathlib import Path
 
 import streamlit as st
 
 from shared.scenery import IDLE_SECONDS, WAKE_SECONDS, scene_timing
 
+CLOUD_PIN = 'https://www.pinterest.com/pin/574209021262662947/'
+CLOUD_VIDEO = Path(__file__).resolve().parents[1] / 'assets' / 'cloudy-opening.mp4'
+
 SCENES = (
-    ('ancient-library.webp', 'The candlelit stacks', 'A candle burns. Somewhere, a lock turns.',
-     'ShutterCraft Studios', 'b6379b5a-5cb5-4b1e-81f6-de12b30bf680'),
-    ('gothic-library.webp', 'The whispering gallery', 'Old shelves shift beneath the wizard’s gaze.',
-     'emowls83', '5f539b31-752a-40cc-b202-64171cff3e66'),
-    ('enchanted-library.webp', 'The enchanted archive', 'Blue light gathers where the spell grows thin.',
-     'MistressBellaJean', '91d1a854-12da-4ac0-b97e-fd7ebc0a244b'),
-    ('wizard-library.webp', 'The wizard’s study', 'Beyond the ancient glass, daylight is waiting.',
-     'AvianGrace', '5837f049-7190-412b-b1b5-08645d69cff0'),
+    ('pinterest-candlelit.jpg', 'The veiled rotunda', 'Light pierces the haze. Somewhere, a lock turns.',
+     'Pinterest preview', 'https://i.pinimg.com/736x/01/22/f2/0122f24f68d6d7b25b502ec21f3be75a.jpg'),
+    ('pinterest-gallery.jpg', 'The whispering gallery', 'Old shelves shift beneath the wizard’s gaze.',
+     'Pinterest preview', 'https://i.pinimg.com/736x/a9/e6/fb/a9e6fb7f8eeba54337cbf4cc81ed10a5.jpg'),
+    ('pinterest-archive.jpg', 'The enchanted archive', 'Candlelight gathers where the spell grows thin.',
+     'Pinterest preview', 'https://i.pinimg.com/736x/8d/e5/0c/8de50c330437ce40af93d343966a0962.jpg'),
+    ('pinterest-study.jpg', 'The wizard’s study', 'Beyond the ancient glass, daylight is waiting.',
+     'Pinterest preview', 'https://i.pinimg.com/736x/28/d5/64/28d56496268b4b3777a8540b30a1f624.jpg'),
 )
 
 
 @st.cache_data(show_spinner=False)
 def image_url(filename):
     path = Path(__file__).resolve().parents[1] / 'assets' / filename
-    return 'data:image/webp;base64,' + b64encode(path.read_bytes()).decode('ascii')
+    mime_type = guess_type(filename)[0] or 'application/octet-stream'
+    return f'data:{mime_type};base64,' + b64encode(path.read_bytes()).decode('ascii')
 
 
 def library_background(key, stage):
     age, awake_age = scene_timing(st.session_state, key, stage)
     scene_index = min(stage, len(SCENES) - 1)
     background = image_url(SCENES[scene_index][0])
+    cloud_poster = image_url('cloudy-opening.jpg')
     st.markdown(f'''<style>
         [data-testid="stAppViewContainer"] {{
             background: linear-gradient(rgba(12, 10, 8, .83), rgba(12, 10, 8, .94)),
@@ -68,12 +74,19 @@ def library_background(key, stage):
             font-family: Georgia, serif; font-size: 1.1rem; }}
         .wizard-presence span {{ font: .72rem sans-serif; color: #b1a592;
             margin-left: .5rem; }}
-        .wake-fog {{ position: fixed; inset: 0; z-index: 9999; pointer-events: none;
-            background: #c0c8cb; display: grid; place-items: center;
+        [class*="st-key-wake_opening_"] {{ position: fixed !important; inset: 0; z-index: 9999;
+            width: 100% !important; height: 100% !important; overflow: hidden;
+            pointer-events: none; background: #080e19 url("{cloud_poster}") center / cover;
             animation: wake-reveal {WAKE_SECONDS}s ease-in-out {-awake_age}s forwards; }}
-        .wake-fog p {{ color: #262e38; font: italic clamp(1.3rem, 4vw, 2rem) Georgia, serif;
-            text-align: center; padding: 1.5rem; z-index: 1; }}
-        .wake-cloud {{ position: absolute; inset: -30%; filter: blur(28px);
+        [class*="st-key-wake_opening_"] video {{ position: absolute; inset: 0; width: 100%;
+            height: 100%; object-fit: cover; pointer-events: none; }}
+        [class*="st-key-wake_opening_"] video::-webkit-media-controls {{ display: none !important; }}
+        .wake-fog {{ position: fixed; inset: 0; z-index: 2; pointer-events: none;
+            background: linear-gradient(rgba(8, 14, 25, .08), rgba(8, 14, 25, .3));
+            display: grid; place-items: center; }}
+        .wake-fog p {{ color: #edf4ff; font: italic clamp(1.3rem, 4vw, 2rem) Georgia, serif;
+            text-shadow: 0 2px 24px #000; text-align: center; padding: 1.5rem; z-index: 1; }}
+        .wake-cloud {{ position: absolute; inset: -30%; filter: blur(28px); opacity: .3;
             background: radial-gradient(ellipse at 22% 40%, #e9eff0 0%, transparent 52%),
                 radial-gradient(ellipse at 78% 60%, #8e9ba7 0%, transparent 50%);
             animation: cloud-drift {WAKE_SECONDS}s ease-out {-awake_age}s both; }}
@@ -82,7 +95,7 @@ def library_background(key, stage):
             26.11%, 100% {{ opacity: 0; }}
         }}
         @keyframes wake-reveal {{
-            0%, 20% {{ opacity: 1; visibility: visible; }}
+            0%, 50% {{ opacity: 1; visibility: visible; }}
             100% {{ opacity: 0; visibility: hidden; }}
         }}
         @keyframes cloud-drift {{
@@ -94,13 +107,19 @@ def library_background(key, stage):
             .library-scene {{ height: 320px; }}
         }}
         @media (prefers-reduced-motion: reduce) {{
-            .wake-fog, .wake-cloud {{ display: none; }}
+            [class*="st-key-wake_opening_"], .wake-fog, .wake-cloud {{ display: none !important; }}
         }}
     </style>''', unsafe_allow_html=True)
     if awake_age < WAKE_SECONDS:
-        st.markdown('''<div class="wake-fog" aria-hidden="true"><div class="wake-cloud"></div>
-            <p>A clouded mind. A locked door.<br>Someone is waiting for you to wake.</p></div>''',
-            unsafe_allow_html=True)
+        # A fresh node resumes the CSS timeline correctly on reruns and restarts.
+        woke_at = st.session_state[key]['woke_at']
+        opening_key = f'wake_opening_{int(woke_at * 1_000_000)}_{int(awake_age * 1_000_000)}'
+        with st.container(key=opening_key):
+            st.video(str(CLOUD_VIDEO), autoplay=True, muted=True, loop=True,
+                     start_time=int(awake_age), alt='Starry sky seen through trees, from the opening Pinterest Pin')
+            st.markdown('''<div class="wake-fog" aria-hidden="true"><div class="wake-cloud"></div>
+                <p>A clouded mind. A locked door.<br>Someone is waiting for you to wake.</p></div>''',
+                unsafe_allow_html=True)
     return scene_index, age
 
 
@@ -122,7 +141,9 @@ def library_scene(scene_index, age, *, escaped=False):
 
 
 def wallpaper_credit():
-    with st.expander('Library artwork · Zedge'):
-        for _, title, _, artist, item_id in SCENES:
-            st.caption(f'[{title} — {artist}](https://www.zedge.net/wallpapers/{item_id})')
-        st.caption('Public previews, preserved as supplied, including any watermarks.')
+    with st.expander('Library artwork · Pinterest'):
+        st.caption('[Ancient library search on Pinterest](https://www.pinterest.com/search/pins/?q=ancient%20library&rs=typed)')
+        for _, title, _, source, source_url in SCENES:
+            st.caption(f'[{title} — {source}]({source_url})')
+        st.caption(f'[Starry awakening video — Pinterest Pin]({CLOUD_PIN})')
+        st.caption('Public preview images, preserved as supplied.')
