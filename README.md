@@ -47,6 +47,7 @@ The project does not train or fine-tune a model. It uses an existing Gemini API 
 
 - A six-second awakening using the selected Pinterest starry-sky video beneath drifting mist, followed by a fade into the library.
 - Morvan's wizard persona, a natural-language chat interface, and a clear restart control: **Wake again**.
+- Exactly **three selectable responses** per active turn, labeled A/B/C. Players can choose an option or write their own message. Version 1 generates contextual replies with Gemini; Version 2 offers Python-grounded actions and code answers only after their clues are earned.
 - Six interactive objects: bookshelf, painting, desk, clock, drawer, and brass door.
 - A hidden-key discovery, a drawer-code puzzle, and a final four-digit exit challenge.
 - Four locally stored library images. Images change at clue milestones and crossfade every **45 seconds without progress**. Ordinary reruns preserve that timer.
@@ -169,7 +170,7 @@ For offline Version 2 gameplay, start without `GEMINI_API_KEY` in either the env
 ## Playing the game
 
 1. Let the awakening fade, then read or listen to Morvan's introduction.
-2. Enter an action in the chat box, such as `examine the bookshelf`.
+2. Choose one of the three A/B/C responses, or enter your own action in the chat box.
 3. Investigate objects, collect discovered items, and combine the clues.
 4. Use the drawer dial and the door keypad when you have their codes.
 5. Choose **Wake again** to clear game progress and replay the opening.
@@ -234,7 +235,7 @@ After a valid exit, Version 2 prints `ESCAPED!`, sets `door_open=True`, records 
 
 ![Version 1 architecture](diagrams/version1.png)
 
-The UI stores the conversation in `st.session_state.v1_messages`. The exact system prompt in `version1/app.py` contains Morvan's persona, object descriptions, puzzle sequence, and secret answers. Each player message and the conversation are sent to Gemini. Its reply supplies both the story and the gameplay decision.
+The UI stores the conversation in `st.session_state.v1_messages`. Interactive replies request a JSON object containing `dialogue` and three `options`; the app stores only the spoken text in history, and sends the selected option as the next ordinary player message. Malformed options are replaced by three safe presentation suggestions. The exact system prompt in `version1/app.py` contains Morvan's persona, object descriptions, puzzle sequence, and secret answers. Each player message and the conversation are sent to Gemini. Its reply supplies both the story and the gameplay decision.
 
 There is no independent inventory or puzzle validator in Version 1. Its scene-stage marker is presentation-only and is inferred from the wizard's prose; it does not make the game state reliable. Version 1 intentionally follows the assignment's normal-player scope.
 
@@ -245,6 +246,8 @@ There is no independent inventory or puzzle validator in Version 1. Its scene-st
 The UI passes the player's text to `process_action(state, action)`. That function recognizes supported intents, checks prerequisites, and changes the dataclass only when the implemented rules allow the action. It returns an exact event string.
 
 If narration is available, Gemini receives the player's request, that authorized event, and `state.public_view()`. The system does not send the complete room configuration or all secret solutions to the narrator. A discovered clue may legitimately appear in a public event. Generated narration is displayed separately and is never parsed to update the state.
+
+Three suggested replies are built from the current Python state. Drawer-code answers appear only after the painting clue; final-door answers wait for the required discoveries. Selecting a wrong answer is handled by the same validator as typed input.
 
 The model can still say something misleading, including falsely claiming that the player escaped. The authoritative state and **Library event** remain the source of truth. A test deliberately supplies a false `ESCAPED!` narration and verifies that the door and scenery do not advance.
 
@@ -279,7 +282,7 @@ Audio is opt-in. Successful clips are cached in session memory, and failed autom
 python -m pytest -q
 ```
 
-The recorded verification contains **18 passing tests**. The UI tests replace external model functions locally; a passing UI test is not a claim about a live model's answer.
+The recorded verification contains **22 passing tests**. The UI tests replace external model functions locally; a passing UI test is not a claim about a live model's answer.
 
 | Test file | Tests | Coverage |
 | --- | ---: | --- |
@@ -287,6 +290,7 @@ The recorded verification contains **18 passing tests**. The UI tests replace ex
 | `tests/test_scenery.py` | 4 | Idle clock persistence, progression/restart timing, trusted milestones, and Version 1 visual-only progress |
 | `tests/test_apps.py` | 2 | Wizard prompt/progress/restart and prevention of narrator-authorized escape |
 | `tests/test_dialogue.py` | 4 | Spoken-text separation, WAV/echo validity, opt-in cached speech, and graceful speech failure |
+| `tests/test_choices.py` | 4 | Contextual replies, malformed-response fallback, no premature code hints, single submission, wrong answers, full button-only escape, and restart |
 
 A machine-readable test run is saved in [evaluation/pytest-results.xml](evaluation/pytest-results.xml). To refresh that evidence:
 
@@ -299,6 +303,8 @@ python -m pytest -q --junitxml=evaluation/pytest-results.xml
 [comparison_results.json](evaluation/comparison_results.json) stores prompts, real Version 1 responses or provider error codes, and Version 2 before/after states. [comparison_results.md](evaluation/comparison_results.md) presents the same evidence for review. Cases cover the five example challenges in the assignment plus nonexistent-object and premature-exit checks.
 
 In the recorded run on **17 November 2026**, Version 1 declared an unearned escape for the false-progress claim and the immediate correct-code request; it resisted the other five challenges. Version 2 rejected all seven invalid actions without changing public state. Three initial provider errors were preserved and successfully retried.
+
+The saved comparison predates the response-button UI and used plain-text Version 1 output with the same system prompt. The current interactive app requests structured dialogue/options; these historical transcripts are not a new robustness evaluation of that output format.
 
 Each case starts from a fresh game. For the wrong-code case, both versions independently examine the painting first. Version 1 is queried with the exact app system prompt; its recorded text is qualitatively reviewed, not automatically judged by a keyword score. Version 2 runs its real deterministic engine without optional narration. Its action history advances even when its public state stays unchanged.
 
@@ -354,11 +360,12 @@ AI_Escape_Room/
 │   ├── appearance.py              # Video opening, scene display, and source links
 │   ├── scenery.py                 # Presentation milestones and idle timing
 │   ├── dialogue.py                # Typed dialogue and speech controls
+│   ├── choices.py                 # Three-response UI, parsing, and grounded choices
 │   ├── speech.py                  # Gemini speech, echo, and WAV encoding
 │   └── ui/index.html              # Browser-side typing component
 ├── assets/                        # Local images/video and media-source records
 ├── diagrams/                      # Version 1/2 diagrams in DOT, SVG, and PNG
-├── tests/                         # 18 automated tests
+├── tests/                         # 22 automated tests
 ├── scripts/evaluate_comparison.py # Live side-by-side challenge recorder
 ├── evaluation/                    # Recorded comparisons and pytest evidence
 ├── .streamlit/

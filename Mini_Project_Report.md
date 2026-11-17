@@ -22,13 +22,13 @@ A GameState dataclass records examined objects, inventory, solved clues, drawer/
 
 ## 4. Player experience
 
-A six-second Pinterest video beneath drifting mist introduces the awakening. Four local library scenes change at clue milestones or after 45 seconds without progress. Morvan's latest reply types into an automatically sized component with skip, replay and transcript controls. Optional AI speech uses a wizard voice and a short echo; it has no rules authority. Reduced-motion settings skip the opening and reveal text immediately. Wake again clears progress and replays the opening.
+A six-second Pinterest video beneath drifting mist introduces the awakening. Four local library scenes change at clue milestones or after 45 seconds without progress. Morvan's latest reply types into an automatically sized component with skip, replay and transcript controls. Players can choose one of three contextual replies or type freely. Optional AI speech uses a wizard voice and a short echo; it has no rules authority. Reduced-motion settings skip the opening and reveal text immediately. Wake again clears progress and replays the opening.
 
 # Evaluation and observed results
 
 ## 5. Method and reproducibility
 
-Seven isolated challenge cases used gemini-3.8-flash at temperature 0.5. Every case began from a fresh state. The wrong-code case first examined the painting in both versions independently. Version 1 used its exact application prompt and real Gemini replies; Version 2 used the real engine with optional prose disabled. Full prompts, setup replies, before/after state and error records are saved in evaluation/comparison_results.json; qualitative reviews are fingerprinted against that file.
+Seven isolated challenge cases used gemini-3.8-flash at temperature 0.5. Every case began from a fresh state. The wrong-code case first examined the painting in both versions independently. Version 1 used its exact application prompt and real Gemini replies; Version 2 used the real engine with optional prose disabled. Full prompts, setup replies, before/after state and error records are saved in evaluation/comparison_results.json; qualitative reviews are fingerprinted against that file. This comparison predates the response-button UI and used plain-text output; it is not a new test of structured reply generation.
 
 | Challenge | Observed Version 1 behavior | Version 2 authorized event |
 | --- | --- | --- |
@@ -44,7 +44,7 @@ Observed finding: Version 1 accepted an unsupported claim of prior puzzle comple
 
 ## 6. Automated and presentation verification
 
-The saved pytest run contains 18 passes, 0 failures and 0 errors: eight engine tests, four scenery tests, two application tests and four dialogue/audio tests. Tests cover legitimate escape, invalid actions, restart/timers, cached opt-in speech and failure fallback. A deliberately false narrator escape statement leaves Version 2's door locked. UI tests mock external model functions and therefore do not measure live Gemini behavior.
+The saved pytest run contains 22 passes, 0 failures and 0 errors: eight engine tests, four scenery tests, two application tests, four dialogue/audio tests and four choice tests. Tests cover legitimate escape, invalid actions, restart/timers, cached opt-in speech, failure fallback and a complete button-only escape with wrong-answer validation. A deliberately false narrator escape statement leaves Version 2's door locked. UI tests mock external model functions and therefore do not measure live Gemini behavior.
 
 Three initial provider requests failed (HTTP 429, 503, 504); their original errors remain in the evidence and only failed cases were retried. The seven retained answers are not seven uninterrupted requests. Earlier browser checks confirmed video playback/fade/restart, mobile layout, reduced motion, text typing/skip/replay, literal rendering of HTML-like text and live audio playback. Browser checks are separate from the automated test suite.
 

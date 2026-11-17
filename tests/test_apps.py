@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_version1_wizard_progress_and_restart(monkeypatch):
     calls = []
 
-    def wizard(system, messages):
+    def wizard(system, messages, **kwargs):
         calls.append(system)
         return 'Behind the red book you find a small brass key, apprentice.'
 

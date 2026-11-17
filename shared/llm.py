@@ -17,7 +17,8 @@ def api_key():
         return ''
 
 
-def generate(system_instruction: str, messages: list[dict], *, temperature: float = 0.5):
+def generate(system_instruction: str, messages: list[dict], *, temperature: float = 0.5,
+             response_schema=None):
     key = api_key()
     if not key:
         return None
@@ -41,6 +42,8 @@ def generate(system_instruction: str, messages: list[dict], *, temperature: floa
             temperature=temperature,
             max_output_tokens=1024,
             thinking_config=thinking,
+            response_mime_type='application/json' if response_schema else None,
+            response_json_schema=response_schema,
         ),
     )
     return (response.text or '').strip() or None

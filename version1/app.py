@@ -12,6 +12,7 @@ from shared.llm import generate, api_key
 from shared.appearance import library_background, library_scene, wallpaper_credit
 from shared.scenery import stage_for_reply
 from shared.dialogue import read_aloud_control, reset_dialogue, wizard_message
+from shared.choices import OPENING_OPTIONS, TURN_SCHEMA, parse_turn, response_options
 
 SYSTEM = f'''{WIZARD_PERSONA}
 Your enchanted prison is {ROOM_TITLE}, a text escape room.
@@ -34,6 +35,8 @@ if 'v1_messages' not in st.session_state:
 st.session_state.v1_messages[0]['content'] = INTRO
 if 'v1_scene_stage' not in st.session_state:
     st.session_state.v1_scene_stage = 0
+if 'v1_options' not in st.session_state:
+    st.session_state.v1_options = OPENING_OPTIONS
 
 scene_index, scene_age = library_background('v1_scenery', st.session_state.v1_scene_stage)
 st.markdown('<p class="trial-eyebrow">Morvan’s trial · Version 1</p>', unsafe_allow_html=True)
@@ -42,6 +45,7 @@ st.caption('Find the clues. Break the spell. Earn your freedom.')
 if st.button('↻ Wake again', help='Restart the game and replay the awakening.'):
     st.session_state.v1_messages = [{'role': 'assistant', 'content': INTRO}]
     st.session_state.v1_scene_stage = 0
+    st.session_state.v1_options = OPENING_OPTIONS
     st.session_state.pop('v1_scenery', None)
     reset_dialogue('v1')
     st.rerun()
@@ -65,7 +69,12 @@ with conversation:
                                    voice_enabled=voice_enabled)
                 else:
                     st.write(message['content'])
-    prompt = st.chat_input('Speak to Morvan, or try “examine the bookshelf”…')
+    selected = response_options(
+        () if st.session_state.v1_scene_stage == 4 else st.session_state.v1_options,
+        prefix='v1', turn=len(st.session_state.v1_messages), disabled=not api_key(),
+    )
+    typed = st.chat_input('Or write your own response to Morvan…')
+    prompt = selected or typed
     if prompt:
         st.session_state.v1_messages.append({'role': 'user', 'content': prompt})
         if not api_key():
@@ -73,7 +82,9 @@ with conversation:
         else:
             try:
                 with st.spinner('Morvan considers your move…'):
-                    reply = generate(SYSTEM, st.session_state.v1_messages)
+                    result = generate(SYSTEM, st.session_state.v1_messages, response_schema=TURN_SCHEMA)
+                    reply, options = parse_turn(result)
+                    st.session_state.v1_options = options
                 if not reply:
                     reply = '“The mist has swallowed my words, apprentice. Try your move again.”'
             except Exception:
