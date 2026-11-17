@@ -1,0 +1,18 @@
+digraph V2 {
+ graph [label="Version 2 — Python-validated escape room", labelloc=t, fontsize=20, fontname="Helvetica", bgcolor="white", rankdir=LR, pad=0.35, nodesep=0.48];
+ node [shape=box, style="rounded,filled", fillcolor="#EDF3FA", color="#43617C", fontname="Helvetica", fontsize=12, margin="0.18,0.12"];
+ player [label="Player"];
+ ui [label="Streamlit UI"];
+ engine [label="Python intent parsing\n+ action validation", fillcolor="#E6F4E9"];
+ state [label="GameState\nInventory / puzzles / locks", fillcolor="#E6F4E9"];
+ event [label="Authorized event\n(ground truth)"];
+ gemini [label="Optional Gemini\nNarrator only", fillcolor="#FFE7D4"];
+ player -> ui [label="Action"];
+ ui -> engine;
+ engine -> state [label="Read/write"];
+ state -> engine [label="Current state"];
+ engine -> event [label="Validated outcome"];
+ event -> ui [label="Always displayed"];
+ event -> gemini [style=dashed, label="Public info only"];
+ gemini -> ui [style=dashed, label="Supplemental prose"];
+}

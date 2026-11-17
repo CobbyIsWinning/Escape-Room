@@ -1,0 +1,12 @@
+digraph V1 {
+ graph [label="Version 1 — LLM-controlled escape room", labelloc=t, fontsize=20, fontname="Helvetica", bgcolor="white", rankdir=LR, pad=0.35, nodesep=0.45];
+ node [shape=box, style="rounded,filled", fillcolor="#EDF3FA", color="#43617C", fontname="Helvetica", fontsize=12, margin="0.18,0.12"];
+ player [label="Player"];
+ ui [label="Streamlit chat UI\nConversation history"];
+ model [label="Google Gemini\nGame Master + rules judge", fillcolor="#FFE7D4"];
+ text [label="Narrated outcome\n(also treated as game truth)"];
+ player -> ui [label="Natural-language action"];
+ ui -> model [label="Full history + secrets"];
+ model -> text [label="Unvalidated decision"];
+ text -> ui;
+}
